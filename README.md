@@ -18,7 +18,7 @@ This repository contains two Colab-ready notebooks required for the assignment:
 - Augmentations: RandomCrop, HorizontalFlip, ShiftScaleRotate, Cutout
 - Mixup alpha: 0.2
 - Scheduler: CosineAnnealing
-- 
+
 ## Tiny results table
 | Notebook | Config (patch/embed/depth) | Epochs | Best CIFAR-10 val acc (%) |\n|---|---:|---:|---:|\n| q1.ipynb | 4 / 256 / 8 | 100 (recommended) | ~86–90% (depends on run/seed) |\n
 ## Short analysis 
