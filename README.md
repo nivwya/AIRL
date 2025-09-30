@@ -10,7 +10,10 @@ This repository contains two Colab-ready notebooks required for the assignment:
 4. For `q2.ipynb`: upload required model checkpoints into Colab (`sam_vit_h.pth`, GroundingDINO checkpoint if available) and an example image (`/content/example.jpg`). Run all cells.\n
 ## Best model config 
 - Image size: 32\n- Patch size: 4\n- Embedding dim: 256\n- Depth: 8\n- Heads: 8\n- Batch size: 256\n- Optimizer: AdamW (lr=3e-4, weight_decay=0.05)\n- Augmentations: RandomCrop, HorizontalFlip, ShiftScaleRotate, Cutout\n- Mixup alpha: 0.2\n- Scheduler: CosineAnnealing
-## Tiny results table\n
+## Tiny results table
 | Notebook | Config (patch/embed/depth) | Epochs | Best CIFAR-10 val acc (%) |\n|---|---:|---:|---:|\n| q1.ipynb | 4 / 256 / 8 | 100 (recommended) | ~86–90% (depends on run/seed) |\n
-## Short analysis (bonus)\n
-- **Patch size:** smaller patches (2) increase sequence length and capacity, often improving accuracy but costing memory/time.\n- **Depth vs. width:** deeper models (greater depth) capture more hierarchical transformations; increasing embed_dim improves representational capacity but uses more memory.\n- **Augmentations:** RandAugment / CutMix / Mixup typically boost generalization on CIFAR-10.\n- **Optimizer & schedule:** AdamW + cosine annealing with warmup helps converge stably.\n
+## Short analysis 
+- **Patch size:** smaller patches (2) increase sequence length and capacity, often improving accuracy but costing memory/time.
+- **Depth vs. width:** deeper models (greater depth) capture more hierarchical transformations; increasing embed_dim improves representational capacity but uses more memory.
+- **Augmentations:** RandAugment / CutMix / Mixup typically boost generalization on CIFAR-10.
+- **Optimizer & schedule:** AdamW + cosine annealing with warmup helps converge stably.
