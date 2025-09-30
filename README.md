@@ -20,7 +20,9 @@ This repository contains two Colab-ready notebooks required for the assignment:
 - Scheduler: CosineAnnealing
 
 ## Tiny results table
-| Notebook | Config (patch/embed/depth) | Epochs | Best CIFAR-10 val acc (%) |\n|---|---:|---:|---:|\n| q1.ipynb | 4 / 256 / 8 | 100 (recommended) | ~86–90% (depends on run/seed) |\n
+| Notebook | Config (patch/embed/depth) | Epochs | Best CIFAR-10 val acc (%) | |---|---:|---:|---:|
+q1.ipynb | 4 / 256 / 8 | 100 | ~86–90% (depends on run/seed) |
+
 ## Short analysis 
 - **Patch size:** smaller patches (2) increase sequence length and capacity, often improving accuracy but costing memory/time.
 - **Depth vs. width:** deeper models (greater depth) capture more hierarchical transformations; increasing embed_dim improves representational capacity but uses more memory.
