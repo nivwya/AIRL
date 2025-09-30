@@ -1,0 +1,156 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Q2 — Text-driven image segmentation with SAM (Colab-ready)\n",
+    "\n",
+    "This notebook demonstrates a pipeline that takes a single image and a text prompt, uses a text→region model (GroundingDINO or CLIPSeg) to produce region seeds, and feeds the seeds to Segment Anything (SAM) to obtain precise masks.\n",
+    "\n",
+    "Notes:\n",
+    "- You will likely need to download/upload model checkpoints (GroundingDINO and SAM). The notebook includes a fallback demo (full-image box) so you can verify SAM works without grounding weights."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Install dependencies (run this cell in Colab)\n",
+    "!pip install -q git+https://github.com/facebookresearch/segment-anything.git\n",
+    "!pip install -q git+https://github.com/IDEA-Research/GroundingDINO.git\n",
+    "!pip install -q transformers timm opencv-python-headless\n",
+    "\n",
+    "print('Install complete (may take a minute).')\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import os\n",
+    "import cv2\n",
+    "import torch\n",
+    "import numpy as np\n",
+    "import matplotlib.pyplot as plt\n",
+    "from segment_anything import sam_model_registry, SamPredictor\n",
+    "from PIL import Image\n",
+    "device = 'cuda' if torch.cuda.is_available() else 'cpu'\n",
+    "print('Device:', device)\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 1 — prepare SAM\n",
+    "Upload a SAM checkpoint (e.g., `sam_vit_h.pth`) to Colab (use left pane Files → Upload). Update the path below if different."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Path to SAM checkpoint (upload to Colab /content/)\n",
+    "sam_checkpoint = '/content/sam_vit_h.pth'  # <-- upload this file in Colab\n",
+    "model_type = 'vit_h'\n",
+    "if os.path.exists(sam_checkpoint):\n",
+    "    sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)\n",
+    "    predictor = SamPredictor(sam)\n",
+    "    print('SAM loaded')\n",
+    "else:\n",
+    "    print('SAM checkpoint not found. Upload sam_vit_h.pth to /content or change the path. You can still run the demo fallback if you do not have the checkpoint.')\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 2 — Upload an image and give a text prompt\n",
+    "Upload an image file to Colab (left Files pane). Set `img_path` and `prompt` below."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Example (upload an image to /content/example.jpg)\n",
+    "img_path = '/content/example.jpg'  # <-- upload image here\n",
+    "prompt = 'a red bicycle'  # change to your desired text prompt\n",
+    "\n",
+    "if not os.path.exists(img_path):\n",
+    "    print('Image not found at', img_path, \"\\nUpload an image to /content/example.jpg via the Colab Files pane.\")\n",
+    "else:\n",
+    "    print('Image found. Prompt:', prompt)\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 3 — (Optional) GroundingDINO or CLIPSeg inference to convert text→boxes/seeds\n",
+    "\n",
+    "If you have a GroundingDINO checkpoint, you can run it to produce boxes for the prompt. If not, this notebook will fall back to a simple full-image box so you can verify SAM integration."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Fallback pipeline that runs SAM on a box derived from the entire image (demo)\n",
+    "if os.path.exists(img_path) and 'predictor' in globals():\n",
+    "    image_bgr = cv2.imread(img_path)\n",
+    "    H, W = image_bgr.shape[:2]\n",
+    "    # Fallback: use full image as a single box seed (x1,y1,x2,y2)\n",
+    "    boxes = np.array([[W*0.02, H*0.02, W*0.98, H*0.98]])\n",
+    "    predictor.set_image(image_bgr[:,:,::-1])  # SAM expects RGB\n",
+    "    input_boxes = torch.tensor(boxes, device=predictor.device, dtype=torch.float)\n",
+    "    masks, scores, logits = predictor.predict(box=input_boxes, multimask_output=True)\n",
+    "\n",
+    "    def show_mask_on_image(img_bgr, mask, color=(0,255,0), alpha=0.4):\n",
+    "        overlay = img_bgr.copy()\n",
+    "        overlay[mask==1] = (overlay[mask==1] * (1-alpha) + np.array(color) * alpha).astype(np.uint8)\n",
+    "        return overlay\n",
+    "\n",
+    "    for i, m in enumerate(masks):\n",
+    "        over = show_mask_on_image(image_bgr, m)\n",
+    "        plt.figure(figsize=(6,6)); plt.imshow(over[:,:,::-1]); plt.title(f'Mask {i} (score {scores[i]:.3f})'); plt.axis('off')\n",
+    "else:\n",
+    "    print('Either image or SAM predictor not available. Upload both to Colab to run end-to-end.')\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Notes & limitations\n",
+    "- For best text→region quality you should run GroundingDINO (or CLIPSeg) to convert the text prompt into high-quality boxes/seeds, then feed them to SAM. GroundingDINO requires a checkpoint (download or upload). The repo `IDEA-Research/GroundingDINO` provides helpers.\n",
+    "- SAM2 official models may be gated; this notebook uses the open-source Segment Anything integration. If you have SAM2 weights or an SDK, replace the SAM loading cell accordingly.\n",
+    "- The fallback (full-image box) is present so you can verify that SAM runs in Colab even without grounding checkpoints.\n"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "name": "python",
+   "version": "3.10"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
